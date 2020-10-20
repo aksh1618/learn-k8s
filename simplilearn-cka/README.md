@@ -693,7 +693,7 @@ spec:
    spec:
      containers:
        - name: voting-app
-         image: dockersamples/ecamplevotingapp_vote
+         image: dockersamples/examplevotingapp_vote
          ports:
            - containerPort: 80
    # similar for result & worker
