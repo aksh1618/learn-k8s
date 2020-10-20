@@ -727,7 +727,7 @@ spec:
        name: voting-service
        app: demo-voting-app
    spec:
-     type: LoadBalancer
+     type: NodePort
      ports:
        - port: 80
          targetPort: 80
@@ -756,5 +756,152 @@ spec:
 
 3. Push to Github
 
-4. Setup GKE
+4. Setup Play with K8s
+
+   1. Go to https://labs.play-with-k8s.com
+
+   2. Add new instance
+
+   3. Follow steps to setup cluster and networking
+
+      - Something like:
+
+        ```
+        kubeadm init --apiserver-advertise-address $(hostname -i) --pod-network-cidr 10.5.0.0/16
+        kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter.yaml
+        ```
+
+      - Note the command for joining worker nodes
+
+   4. Create more instances and add to cluster
+
+      ```
+      # something like
+      kubeadm join 192.168.0.37:6443 --token s5nb02.pzj56cap4oacvgx9 --discovery-token-ca-cert-hash sha256:2ea2d54e2340074b55e5d00715e17b5a2a0763e7bd707f9ba5ba9f8a3a1c0e0
+      ```
+
+   1. Clone repository from github
+
+   2. Create pods and services 
+
+      (Both services work, can be tested by using url from play-with-k8s dashboard with `NodePort` port )
+
+      ```
+      [node2 example-voting-app-kub]$ kubectl create -f pods/voting-app-pod.yml
+      [node2 example-voting-app-kub]$ kubectl create -f services/nodeport/voting-service.yml
+      [node2 example-voting-app-kub]$ kubectl create -f pods/redis-pod.yml
+      [node2 example-voting-app-kub]$ kubectl create -f pods/redis-pod.yml
+      pod/redis-pod created
+      [node2 example-voting-app-kub]$ kubectl create -f services/clusterip/redis-service.yml
+      service/redis created
+      [node2 example-voting-app-kub]$ kubectl create -f pods/postgres-pod.yml
+      pod/postgres-pod created
+      [node2 example-voting-app-kub]$ kubectl create -f services/clusterip/db-service.yml
+      service/db created
+      
+      [node2 example-voting-app-kub]$  kubectl get pod postgres-pod -o go-template="{{range .status.containerStatuses}}{{.lastState.terminated.message}}{{end}}"
+      <no value>[node2 example-voting-app-kub]$
+      
+      [node2 example-voting-app-kub]$ kubectl get all -o wideNAME                 READY   STATUS             RESTARTS   AGE     IP         NODE    NOMINATED NODE   READINESS GATES
+      pod/postgres-pod     0/1     CrashLoopBackOff   5          4m55s   10.5.3.2   node1   <none>           <none>
+      pod/redis-pod        1/1     Running            0          7m54s   10.5.2.2   node4   <none>           <none>
+      pod/voting-app-pod   1/1     Running            0          10m     10.5.1.2   node3   <none>           <none>
+      
+      NAME                     TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE     SELECTOR
+      service/db               ClusterIP   10.109.7.118    <none>        5432/TCP       4m42s   app=demo-voting-app,name=postgres-pod
+      service/kubernetes       ClusterIP   10.96.0.1       <none>        443/TCP        24m     <none>
+      service/redis            ClusterIP   10.106.5.179    <none>        6379/TCP       5m27s   app=demo-voting-app,name=redis-pod
+      service/voting-service   NodePort    10.99.192.109   <none>        80:32590/TCP   9m8s    app=demo-voting-app,name=voting-app-pod
+      
+      [node2 example-voting-app-kub]$ kubectl logs postgres-pod -p
+      Error: Database is uninitialized and superuser password is not specified.
+             You must specify POSTGRES_PASSWORD for the superuser. Use
+             "-e POSTGRES_PASSWORD=password" to set it in "docker run".
+      
+             You may also use POSTGRES_HOST_AUTH_METHOD=trust to allow all connections
+             without a password. This is *not* recommended. See PostgreSQL
+             documentation about "trust":
+             https://www.postgresql.org/docs/current/auth-trust.html
+      
+      [node2 example-voting-app-kub]$ kubectl delete pod postgres-pod
+      pod "postgres-pod" deleted
+      [node2 example-voting-app-kub]$ vi pods/postgres-pod.yml
+      [node2 example-voting-app-kub]$ kubectl create -f pods/postgres-pod.ymlpod/postgres-pod created
+      [node2 example-voting-app-kub]$ kubectl get all -o wide
+      NAME                 READY   STATUS    RESTARTS   AGE   IP         NODE    NOMINATED NODE   READINESS GATES
+      pod/postgres-pod     1/1     Running   0          3s    10.5.3.3   node1   <none>           <none>
+      pod/redis-pod        1/1     Running   0          14m   10.5.2.2   node4   <none>           <none>
+      pod/voting-app-pod   1/1     Running   0          17m   10.5.1.2   node3   <none>           <none>
+      
+      NAME                     TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE   SELECTOR
+      service/db               ClusterIP   10.109.7.118    <none>        5432/TCP       11m   app=demo-voting-app,name=postgres-pod
+      service/kubernetes       ClusterIP   10.96.0.1       <none>        443/TCP        31m   <none>
+      service/redis            ClusterIP   10.106.5.179    <none>        6379/TCP       12m   app=demo-voting-app,name=redis-pod
+      service/voting-service   NodePort    10.99.192.109   <none>        80:32590/TCP   15m   app=demo-voting-app,name=voting-app-pod
+      
+      [node2 example-voting-app-kub]$ kubectl create -f pods/worker-app-pod.yml
+      pod/worker-app-pod created
+      [node2 example-voting-app-kub]$ kubectl apply -f pods/result-app-pod.yml
+      pod/result-app-pod created
+      [node2 example-voting-app-kub]$ kubectl apply -f services/nodeport/result-app-service.yml
+      service/result-service created
+      [node2 example-voting-app-kub]$ kubectl get all -o wide
+      NAME                 READY   STATUS    RESTARTS   AGE    IP         NODE    NOMINATED NODE   READINESS GATES
+      pod/postgres-pod     1/1     Running   0          4m7s   10.5.3.3   node1   <none>           <none>
+      pod/redis-pod        1/1     Running   0          18m    10.5.2.2   node4   <none>           <none>
+      pod/result-app-pod   1/1     Running   0          19s    10.5.3.4   node1   <none>           <none>
+      pod/voting-app-pod   1/1     Running   0          21m    10.5.1.2   node3   <none>           <none>
+      pod/worker-app-pod   0/1     Evicted   0          101s   <none>     node5   <none>           <none>
+      
+      NAME                     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE   SELECTOR
+      service/db               ClusterIP   10.109.7.118     <none>        5432/TCP       15m   app=demo-voting-app,name=postgres-pod
+      service/kubernetes       ClusterIP   10.96.0.1        <none>        443/TCP        35m   <none>
+      service/redis            ClusterIP   10.106.5.179     <none>        6379/TCP       16m   app=demo-voting-app,name=redis-pod
+      service/result-service   NodePort    10.107.255.155   <none>        80:31764/TCP   3s    app=demo-voting-app,name=result-app-pod
+      service/voting-service   NodePort    10.99.192.109    <none>        80:32590/TCP   20m   app=demo-voting-app,name=voting-app-pod
+      
+      [node2 example-voting-app-kub]$ kubectl describe pods/worker-app-pod
+      Name:         worker-app-pod
+      Namespace:    default
+      Priority:     0
+      Node:         node5/
+      Start Time:   Tue, 20 Oct 2020 20:48:47 +0000
+      Labels:       app=demo-voting-app
+                    name=worker-app-pod
+      Annotations:  Status:  Failed
+      Reason:       Evicted
+      Message:      The node was low on resource: ephemeral-storage.
+      IP:
+      IPs:          <none>
+      Containers:
+        worker-app:
+          Image:        dockersamples/examplevotingapp_worker
+          Port:         <none>
+          Host Port:    <none>
+          Environment:  <none>
+          Mounts:
+            /var/run/secrets/kubernetes.io/serviceaccount from default-token-mqdsx (ro)
+      Volumes:
+        default-token-mqdsx:
+          Type:        Secret (a volume populated by a Secret)
+          SecretName:  default-token-mqdsx
+          Optional:    false
+      QoS Class:       BestEffort
+      Node-Selectors:  <none>
+      Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                       node.kubernetes.io/unreachable:NoExecute for 300s
+      Events:
+        Type     Reason       Age        From               Message
+        ----     ------       ----       ----               -------
+        Normal   Scheduled    <unknown>  default-scheduler  Successfully assigned default/worker-app-pod to node5
+        Warning  FailedMount  107s       kubelet, node5     MountVolume.SetUp failed for volume "default-token-mqdsx" : failed to sync secret cache: timed out waiting for the condition
+        Normal   Pulling      106s       kubelet, node5     Pulling image "dockersamples/examplevotingapp_worker"
+        Normal   Pulled       104s       kubelet, node5     Successfully pulled image "dockersamples/examplevotingapp_worker"
+        Normal   Created      97s        kubelet, node5     Created container worker-app
+        Normal   Started      96s        kubelet, node5     Started container worker-app
+        Warning  Evicted      96s        kubelet, node5     The node was low on resource: ephemeral-storage.
+        Normal   Killing      95s        kubelet, node5     Stopping container worker-app
+      ```
+
+      
 

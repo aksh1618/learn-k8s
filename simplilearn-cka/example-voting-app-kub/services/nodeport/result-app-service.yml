@@ -4,9 +4,9 @@ metadata:
   name: result-service
   labels:
     name: result-service
-    app: demo-result-app
+    app: demo-voting-app
 spec:
-  type: LoadBalancer
+  type: NodePort
   ports:
     - port: 80
       targetPort: 80
