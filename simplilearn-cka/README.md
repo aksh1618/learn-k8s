@@ -1,3 +1,29 @@
+# Notes
+
+<!-- vim-markdown-toc GFM -->
+
+* [Introduction](#introduction)
+    * [Terms](#terms)
+    * [Components](#components)
+* [Setup](#setup)
+    * [Kubectl](#kubectl)
+    * [Minikube](#minikube)
+* [PODS](#pods)
+    * [YAML](#yaml)
+* [Replication Controller & Replica Set](#replication-controller--replica-set)
+    * [Scaling](#scaling)
+* [Deployments](#deployments)
+    * [Rollout & Versioning](#rollout--versioning)
+    * [Summary](#summary)
+* [Networking](#networking)
+* [Services](#services)
+    * [Types](#types)
+    * [NodePort Service](#nodeport-service)
+    * [ClusterIP Service](#clusterip-service)
+* [Microservices Example (Play With k8s)](#microservices-example-play-with-k8s)
+
+<!-- vim-markdown-toc -->
+
 ## Introduction
 
 ### Terms
@@ -112,10 +138,10 @@ Containers:
       /var/run/secrets/kubernetes.io/serviceaccount from default-token-9rf6b (ro)
 Conditions:
   Type              Status
-  Initialized       True 
-  Ready             True 
-  ContainersReady   True 
-  PodScheduled      True 
+  Initialized       True
+  Ready             True
+  ContainersReady   True
+  PodScheduled      True
 Volumes:
   default-token-9rf6b:
     Type:        Secret (a volume populated by a Secret)
@@ -161,10 +187,10 @@ Containers:
       /var/run/secrets/kubernetes.io/serviceaccount from default-token-9rf6b (ro)
 Conditions:
   Type              Status
-  Initialized       True 
-  Ready             True 
-  ContainersReady   True 
-  PodScheduled      True 
+  Initialized       True
+  Ready             True
+  ContainersReady   True
+  PodScheduled      True
 Volumes:
   default-token-9rf6b:
     Type:        Secret (a volume populated by a Secret)
@@ -200,7 +226,7 @@ metadata:        		# Data about the object
   labels:
     app: myapp
     type: front-end
-spec:            		# Information pertaining to the object 
+spec:            		# Information pertaining to the object
   containers:
     - name: nginx-container
       image: nginx
@@ -227,7 +253,7 @@ nginx                             1/1     Running             0          30m
 
 ```yaml
 # replicaset-definition.yaml
-apiVersion: apps/v1 # For RC: v1   		
+apiVersion: apps/v1 # For RC: v1
 kind: ReplicaSet # For RC: ReplicationController
 metadata:
   name: myapp-replicaset # For RC: myapp-rc
@@ -377,7 +403,7 @@ TODO: Scaling automatically based on load
 ```yaml
 # deployment-definition.yaml
 # Same as replicaset, except kind: Deployment
-apiVersion: apps/v1 # For RC: v1   		
+apiVersion: apps/v1 # For RC: v1
 kind: Deployment
 metadata:
   name: myapp-deployment
@@ -474,7 +500,7 @@ replicaset.apps/myapp-deployment-7df67f74c5   3         3         3       5m25s
 ############ Checking history
 
 ❯ kubectl rollout history deployments/myapp-deployment
-deployment.apps/myapp-deployment 
+deployment.apps/myapp-deployment
 REVISION  CHANGE-CAUSE
 2         kubectl apply --filename=deployment-definition.yml --record=true
 3         kubectl set image deployment/myapp-deployment nginx-container=nginx --record=true
@@ -495,14 +521,14 @@ myapp-deployment-7df67f74c5-vhclh   1/1     Running        0          4m58s
 myapp-pod                           1/1     Running        0          114m
 nginx                               1/1     Running        0          5h14m
 ❯ kubectl rollout history deployments/myapp-deployment
-deployment.apps/myapp-deployment 
+deployment.apps/myapp-deployment
 REVISION  CHANGE-CAUSE
 2         kubectl apply --filename=deployment-definition.yml --record=true
 3         kubectl set image deployment/myapp-deployment nginx-container=nginx --record=true
 4         kubectl set image deployment/myapp-deployment nginx-container=nginx:boom --record=true
 ❯ kubectl rollout status deployment/myapp-deployment
 Waiting for deployment "myapp-deployment" rollout to finish: 1 out of 3 new replicas have been updated...
-^C%                                                                                       
+^C%
 ############ Rolling back deployment
 
 ❯ kubectl rollout undo deployments/myapp-deployment
@@ -510,7 +536,7 @@ deployment.apps/myapp-deployment rolled back
 ❯ kubectl rollout status deployment/myapp-deployment
 deployment "myapp-deployment" successfully rolled out
 ❯ kubectl rollout history deployments/myapp-deployment
-deployment.apps/myapp-deployment 
+deployment.apps/myapp-deployment
 REVISION  CHANGE-CAUSE
 2         kubectl apply --filename=deployment-definition.yml --record=true
 4         kubectl set image deployment/myapp-deployment nginx-container=nginx:boom --record=true
@@ -550,7 +576,7 @@ Rollback: kubectl rollout undo deployment/myapp-deployment
 
 - ClusterIP: Virtual IPs for communication inside node
 - NodePort: Exposes cluster IP on a node port
-- LoadBalancer: Exposes nodeport using cloud provider's load balancer 
+- LoadBalancer: Exposes nodeport using cloud provider's load balancer
 - [ExternalName](https://akomljen.com/kubernetes-tips-part-1/): Maps service to DNS name (CNAME)
 
 ### NodePort Service
